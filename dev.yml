@@ -1,0 +1,25 @@
+name: psink
+
+type: go
+
+up:
+  - go:
+      version: 1.14.2
+      modules: true
+  - custom:
+      name: Ensure Docker for Mac is installed
+      met?: which docker
+      meet: echo "You must install Docker for Mac. Go to https://docs.docker.com/docker-for-mac/"
+  - custom:
+      name: Start containers
+      met?: "[[ $(docker-compose ps | grep -c 'Up') == 2 ]] 2> /dev/null"
+      meet: docker-compose up -d
+      down: docker-compose down
+
+commands:
+  go:
+    run: go run cmd/main.go
+  test:
+    run: go test ./...
+  style:
+    run: 'golint ./... && errcheck ./...'

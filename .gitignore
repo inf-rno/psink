@@ -1,0 +1,15 @@
+### Go ###
+# Test binary, build with `go test -c`
+*.test
+
+# Go Dep
+/vendor/
+
+### macOS ###
+*.DS_Store
+.AppleDouble
+.LSOverride
+.bundle
+.vscode
+data
+tmp
