@@ -58,11 +58,18 @@ func (p *Psync) sync() error {
 		return fmt.Errorf("failed to send capa :%w", err)
 	}
 	p.src.writer.sync()
-	err = p.src.reader.readRDB()
+	r, n, err := p.src.reader.getRDB()
 	if err != nil {
 		return fmt.Errorf("failed to sync RDB data :%w", err)
 	}
-	p.repl()
+	err = loadRDB(p.ctx, r, p.dest.addr, n)
+	if err != nil {
+		return fmt.Errorf("failed to load rdb: %w", err)
+	}
+	err = p.repl()
+	if err != nil {
+		return fmt.Errorf("failed to replicate buffer: %w", err)
+	}
 	return nil
 }
 
@@ -81,7 +88,7 @@ func (p *Psync) repl() error {
 				}
 				return fmt.Errorf("failed to read command :%w", err)
 			}
-			//fmt.Printf("%s", b)
+			fmt.Printf("%s", b)
 			p.dest.writer.raw(b)
 		}
 	}
@@ -92,6 +99,7 @@ func (p *Psync) log(r *redis) {
 		select {
 		case <-p.ctx.Done():
 			fmt.Println("shutting down log for redis:", r)
+			return
 		default:
 			str, err := r.reader.readLine()
 			if err != nil {

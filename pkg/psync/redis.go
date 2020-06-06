@@ -34,6 +34,7 @@ func (r *redis) connect(ctx context.Context) error {
 	var d net.Dialer
 	conn, err := d.DialContext(ctx, "tcp", r.addr)
 	if err != nil {
+		cancel()
 		return fmt.Errorf("failed to connect to redis: %w", err)
 	}
 	r.ctx = ctx
@@ -66,35 +67,25 @@ func (r *reader) readLine() (string, error) {
 	return r.buf.ReadString('\n')
 }
 
-func (r *reader) readRDB() error {
+func (r *reader) getRDB() (*bufio.Reader, int, error) {
 	str, err := r.buf.ReadString('\n')
 	if err != nil {
-		return fmt.Errorf("failed to read size of rdb data: %w", err)
+		return nil, 0, fmt.Errorf("failed to read size of rdb data: %w", err)
 	}
 	//ignore the idle \n while rdb file is building
 	for len(str) == 1 {
 		str, err = r.buf.ReadString('\n')
 		if err != nil {
-			return fmt.Errorf("failed to read size of rdb data: %w", err)
+			return nil, 0, fmt.Errorf("failed to read size of rdb data: %w", err)
 		}
 	}
 
 	l, err := strconv.Atoi(str[1 : len(str)-2])
 	if str[0] != '$' || err != nil {
-		return fmt.Errorf("failed to read size of rdb data: %w, %s", err, str)
+		return nil, 0, fmt.Errorf("failed to read size of rdb data: %w, %s", err, str)
 	}
 
-	p := make([]byte, 4096)
-	for i := 0; i < l; {
-		n, err := r.buf.Read(p)
-		if err != nil {
-			return fmt.Errorf("failed to read rdb data: %w", err)
-		}
-		i += n
-	}
-
-	fmt.Printf("finished loading %d bytes of rdb data\n", l)
-	return nil
+	return r.buf, l, nil
 }
 
 func (r *reader) readCommand() ([]byte, error) {
