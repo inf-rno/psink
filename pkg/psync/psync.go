@@ -37,11 +37,11 @@ func (p *Psync) Go() {
 	if err != nil {
 		panic("failed to read pong")
 	}
+	go p.log(p.dest)
 	err = p.sync()
 	if err != nil {
 		panic(err)
 	}
-	go p.log(p.dest)
 }
 
 func (p *Psync) cleanup() {
@@ -108,7 +108,7 @@ func (p *Psync) log(r *redis) {
 				}
 				panic(fmt.Errorf("failed to read line :%w", err))
 			}
-			fmt.Printf("%s", str)
+			fmt.Printf("RESP: %s", str)
 		}
 	}
 }
